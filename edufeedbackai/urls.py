@@ -16,7 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from core.views import EvaluacionesDocenteView,  CreateTokenView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/', CreateTokenView.as_view(), name='login'), #POST
+    path('evaluaciones/docente/', EvaluacionesDocenteView.as_view(), name='evaluaciones_docente'), #GET
 ]

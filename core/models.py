@@ -58,9 +58,9 @@ class Comentario(models.Model):
     sentimiento = models.CharField(max_length=3)
 
 class Evaluacion(models.Model):
-    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='comentario_id')
-    docente = models.ForeignKey(Docente, on_delete=models.CASCADE, db_column='docente_id')
-    materia = models.ForeignKey(Materia, on_delete=models.CASCADE, db_column='materia_codigo')
+    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='comentario_id', related_name='evaluaciones_comentario')
+    docente = models.ForeignKey(Docente, on_delete=models.CASCADE, db_column='docente_id', related_name='evaluaciones_docente')
+    materia = models.ForeignKey(Materia, on_delete=models.CASCADE, db_column='materia_codigo', related_name='evaluaciones_materia')
     grupo = models.IntegerField()
     semestre = models.CharField(max_length=10)
     anho = models.IntegerField()
