@@ -5,6 +5,8 @@ from rest_framework.authtoken.views import ObtainAuthToken, AuthTokenSerializer
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.settings import api_settings
+from rest_framework.views import APIView
+import google.generativeai as genai
 
 from .models import Evaluacion
 from .serializers import EvaluacionSerializer
@@ -50,3 +52,28 @@ class EvaluacionesDocenteView(generics.ListAPIView):
         elif usuario.is_daca:
             return Evaluacion.objects.all()
         return Evaluacion.objects.none()
+
+class AnalyzeCommentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Recibe el objeto JSON desde el frontend
+        comentarios = request.data
+
+        # Configura la API de Gemini
+        genai.configure(api_key="API-KEY")
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+
+        # Prepara el mensaje para Gemini
+        mensaje = f"""Quiero que analices la siguiente informacion y me des tu opinion sobre los comentarios positivos,
+            neutrales y negativos por cada semestre que hicieron los estudiantes a sus docentes. Quiero que tu opinion 
+            sea resumida para no abrumar al usuario con mucha informacion, puedes usar 2000 caracteres como maximo y 
+            toda la informacion debe estar en un solo parrafo: {comentarios}"""
+
+        # Genera la respuesta usando Gemini
+        response = model.generate_content(mensaje)
+
+        # Retorna la respuesta de Gemini en la respuesta HTTP
+        return Response({
+            "texto_generado": response.text
+        }, status=status.HTTP_200_OK)
