@@ -16,11 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import EvaluacionesDocenteView,  CreateTokenView, AnalyzeCommentsView
+from core.views import EvaluacionesDocenteView,  CreateTokenView, AnalyzeCommentsView, ExcelUploadView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', CreateTokenView.as_view(), name='login'), #POST
     path('evaluaciones/docente/', EvaluacionesDocenteView.as_view(), name='evaluaciones_docente'), #GET
     path('analizar/comentarios/', AnalyzeCommentsView.as_view(), name='analizar_comentarios'),  # POST
+    path('upload-excel/', ExcelUploadView.as_view(), name='upload-excel'), # POST
 ]
