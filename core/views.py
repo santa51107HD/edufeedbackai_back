@@ -22,6 +22,7 @@ import re
 from transformers import pipeline
 from tqdm import tqdm
 from django.contrib.auth.hashers import make_password
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 ERROR_SERIALIZER = "Los datos enviados no son correctos"
 
@@ -70,17 +71,15 @@ class AnalyzeCommentsView(APIView):
 
     def post(self, request):
         # Recibe el objeto JSON desde el frontend
-        comentarios = request.data
+        datos = request.data.get("datos")
+        texto = request.data.get("texto")
 
         # Configura la API de Gemini
         genai.configure(api_key="API-KEY")
         model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
         # Prepara el mensaje para Gemini
-        mensaje = f"""Quiero que analices la siguiente informacion y me des tu opinion sobre los comentarios positivos,
-            neutrales y negativos por cada semestre que hicieron los estudiantes a sus docentes. Quiero que tu opinion 
-            sea resumida para no abrumar al usuario con mucha informacion, puedes usar 2000 caracteres como maximo y 
-            toda la informacion debe estar en un solo parrafo: {comentarios}"""
+        mensaje = f"{texto}: {datos}"
 
         # Genera la respuesta usando Gemini
         response = model.generate_content(mensaje)
@@ -450,3 +449,51 @@ class ExcelUploadView(APIView):
             )
 
         return Response({"status": "success"}, status=status.HTTP_201_CREATED)
+    
+class TFIDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
+
+    def get_filtered_comments(self):
+        usuario = self.request.user
+        
+        # Si el usuario es docente, filtramos evaluaciones por docente y luego obtenemos los comentarios
+        if usuario.is_docente:
+            evaluaciones = Evaluacion.objects.filter(docente__usuario=usuario)
+        
+        # Si el usuario es director de programa, filtramos evaluaciones por escuela de la materia
+        elif usuario.is_director_programa:
+            evaluaciones = Evaluacion.objects.filter(materia__escuela=usuario.director_programa.escuela)
+        
+        # Si el usuario es daca, obtenemos todas las evaluaciones.
+        elif usuario.is_daca:
+            evaluaciones = Evaluacion.objects.all()
+        
+        # Si no es ninguno de los roles, regresamos un queryset vacío
+        else:
+            evaluaciones = Evaluacion.objects.none()
+
+        # Extraemos los comentarios relacionados a las evaluaciones filtradas
+        comentarios = Comentario.objects.filter(evaluaciones_comentario__in=evaluaciones)
+        
+        return comentarios
+
+    def get(self, request, *args, **kwargs):
+        # Obtener los comentarios filtrados según el tipo de usuario
+        comentarios = self.get_filtered_comments()
+
+        # Manejar caso sin comentarios
+        if not comentarios.exists():
+            return Response({"error": "No hay comentarios disponibles."}, status=404)
+
+         # Extraer el campo 'comentario_limpio' de los comentarios
+        df = pd.DataFrame(comentarios.values_list('comentario_limpio', flat=True), columns=['comentario_limpio'])
+        
+        # Calcular TF-IDF
+        tfidf_vectorizer = TfidfVectorizer()
+        tfidf_matrix = tfidf_vectorizer.fit_transform(df['comentario_limpio'])
+        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
+        term_importance = tfidf_df.mean().sort_values(ascending=False)
+        top_n_tokens = term_importance.head(10).to_dict()  # Ajusta el número de palabras según sea necesario
+
+        return Response(top_n_tokens)
