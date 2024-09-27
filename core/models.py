@@ -24,7 +24,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     id = models.CharField(max_length=10, primary_key=True)
     nombre = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
-    is_director_programa = models.BooleanField('director status', default=False)
+    is_director_escuela = models.BooleanField('director status', default=False)
     is_docente = models.BooleanField('docente status', default=False)
     is_daca = models.BooleanField('daca status', default=False)
     is_active = models.BooleanField(default=True)
@@ -34,8 +34,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'id'
 
-class DirectorPrograma(models.Model):
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, primary_key=True, related_name='director_programa')
+class DirectorEscuela(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, primary_key=True, related_name='director_escuela')
     escuela = models.CharField(max_length=50)
 
 class Docente(models.Model):

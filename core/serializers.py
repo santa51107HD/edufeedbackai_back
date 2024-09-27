@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import DirectorPrograma, Docente, Daca, Materia, Comentario, Evaluacion
+from .models import DirectorEscuela, Docente, Daca, Materia, Comentario, Evaluacion
 
 class AuthTokenSerializer(serializers.Serializer):
     id = serializers.CharField()
@@ -12,11 +12,11 @@ class AuthTokenSerializer(serializers.Serializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ['id', 'password','nombre', 'is_director_programa', 'is_docente', 'is_daca']
+        fields = ['id', 'password','nombre', 'is_director_escuela', 'is_docente', 'is_daca']
 
-class DirectorProgramaSerializer(serializers.ModelSerializer):
+class DirectorEscuelaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DirectorPrograma
+        model = DirectorEscuela
         fields = ['usuario', 'escuela']
 
 class DocenteSerializer(serializers.ModelSerializer):

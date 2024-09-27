@@ -44,7 +44,7 @@ class CreateTokenView(ObtainAuthToken):
                 'token': token.key,
                 'id': user.id,
                 'nombre': user.nombre,
-                'is_director_programa': user.is_director_programa,
+                'is_director_escuela': user.is_director_escuela,
                 'is_docente': user.is_docente,
                 'is_daca': user.is_daca,
             },status=status.HTTP_302_FOUND)
@@ -60,8 +60,8 @@ class EvaluacionesDocenteView(generics.ListAPIView):
         usuario = self.request.user
         if usuario.is_docente:
             return Evaluacion.objects.filter(docente__usuario=usuario)
-        elif usuario.is_director_programa:
-            return Evaluacion.objects.filter(materia__escuela=usuario.director_programa.escuela)
+        elif usuario.is_director_escuela:
+            return Evaluacion.objects.filter(materia__escuela=usuario.director_escuela.escuela)
         elif usuario.is_daca:
             return Evaluacion.objects.all()
         return Evaluacion.objects.none()
@@ -83,6 +83,7 @@ class AnalyzeCommentsView(APIView):
 
         # Genera la respuesta usando Gemini
         response = model.generate_content(mensaje)
+        # print(response.usage_metadata)
 
         # Retorna la respuesta de Gemini en la respuesta HTTP
         return Response({
@@ -398,7 +399,7 @@ class ExcelUploadView(APIView):
                     nombre=row['nombre'],
                     password=row['contrasenha'], 
                     is_docente=row['es_docente'],
-                    is_director_programa=row['es_director'],
+                    is_director_escuela=row['es_director'],
                     is_daca=row['es_daca']
                 )
 
@@ -457,13 +458,13 @@ class TFIDFView(APIView):
     def get_filtered_comments(self):
         usuario = self.request.user
         
-        # Si el usuario es docente, filtramos evaluaciones por docente y luego obtenemos los comentarios
+        # Si el usuario es docente, filtramos evaluaciones por docente
         if usuario.is_docente:
             evaluaciones = Evaluacion.objects.filter(docente__usuario=usuario)
         
-        # Si el usuario es director de programa, filtramos evaluaciones por escuela de la materia
-        elif usuario.is_director_programa:
-            evaluaciones = Evaluacion.objects.filter(materia__escuela=usuario.director_programa.escuela)
+        # Si el usuario es director de escuela, filtramos evaluaciones por escuela
+        elif usuario.is_director_escuela:
+            evaluaciones = Evaluacion.objects.filter(materia__escuela=usuario.director_escuela.escuela)
         
         # Si el usuario es daca, obtenemos todas las evaluaciones.
         elif usuario.is_daca:
@@ -477,6 +478,14 @@ class TFIDFView(APIView):
         comentarios = Comentario.objects.filter(evaluaciones_comentario__in=evaluaciones)
         
         return comentarios
+    
+    def calcular_tfidf(self, comentarios):
+        df = pd.DataFrame(comentarios.values_list('comentario_limpio', flat=True), columns=['comentario_limpio'])
+        tfidf_vectorizer = TfidfVectorizer()
+        tfidf_matrix = tfidf_vectorizer.fit_transform(df['comentario_limpio'])
+        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
+        term_importance = tfidf_df.mean().sort_values(ascending=False)
+        return term_importance.head(20).to_dict()  # Ajustar el número de palabras si es necesario
 
     def get(self, request, *args, **kwargs):
         # Obtener los comentarios filtrados según el tipo de usuario
@@ -486,14 +495,22 @@ class TFIDFView(APIView):
         if not comentarios.exists():
             return Response({"error": "No hay comentarios disponibles."}, status=404)
 
-         # Extraer el campo 'comentario_limpio' de los comentarios
-        df = pd.DataFrame(comentarios.values_list('comentario_limpio', flat=True), columns=['comentario_limpio'])
-        
-        # Calcular TF-IDF
-        tfidf_vectorizer = TfidfVectorizer()
-        tfidf_matrix = tfidf_vectorizer.fit_transform(df['comentario_limpio'])
-        tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
-        term_importance = tfidf_df.mean().sort_values(ascending=False)
-        top_n_tokens = term_importance.head(10).to_dict()  # Ajusta el número de palabras según sea necesario
+        # TF-IDF general
+        tfidf_general = self.calcular_tfidf(comentarios)
 
-        return Response(top_n_tokens)
+        # Separar comentarios por género
+        docentes_hombres = comentarios.filter(evaluaciones_comentario__docente__genero='male')
+        docentes_mujeres = comentarios.filter(evaluaciones_comentario__docente__genero='female')
+
+        # Calcular TF-IDF por género
+        tfidf_hombres = self.calcular_tfidf(docentes_hombres) if docentes_hombres.exists() else {}
+        tfidf_mujeres = self.calcular_tfidf(docentes_mujeres) if docentes_mujeres.exists() else {}
+
+        # Devolver los resultados
+        response_data = {
+            "general": tfidf_general,
+            "hombres": tfidf_hombres,
+            "mujeres": tfidf_mujeres
+        }
+
+        return Response(response_data)
