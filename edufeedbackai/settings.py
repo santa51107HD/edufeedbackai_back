@@ -83,7 +83,7 @@ WSGI_APPLICATION = 'edufeedbackai.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_edufeedbackai',
+        'NAME': 'tesis',
         'USER': 'postgres',
         'PASSWORD': 'santa',
         'HOST': 'localhost',

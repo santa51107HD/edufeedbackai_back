@@ -14,14 +14,19 @@ class UserManager(BaseUserManager):
     
     def create_superuser(self, id, password):
         user = self.create_user(id, password)
+        user.nombre = id
         user.is_staff = True
         user.is_superuser = True
+        user.is_daca = True
         user.save(using=self._db)
+
+        # Crear instancia de Daca asociada al superusuario
+        Daca.objects.create(usuario=user)
 
         return user
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
-    id = models.CharField(max_length=10, primary_key=True)
+    id = models.CharField(max_length=20, primary_key=True)
     nombre = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
     is_director_escuela = models.BooleanField('director status', default=False)

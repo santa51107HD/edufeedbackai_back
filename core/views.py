@@ -8,7 +8,7 @@ from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 import google.generativeai as genai
 
-from .models import Usuario, Docente, Materia, Comentario, Evaluacion
+from .models import Usuario, Docente, Materia, Comentario, Evaluacion, DirectorEscuela
 from .serializers import EvaluacionSerializer
 
 import pandas as pd
@@ -151,19 +151,21 @@ class ExcelUploadView(APIView):
             nombres_desconocidos[nombre] = genero_predicho
 
         """Para este caso en especifico quedaron 3 nombres sin genero, se les asigna el genero manualmente"""
-        # nombres_desconocidos['Leoviviana'] = 'female'
-        # nombres_desconocidos['Johanio'] = 'male'
-        # nombres_desconocidos['Johannio'] = 'male'
+        nombres_desconocidos['Leoviviana'] = 'female'
+        nombres_desconocidos['Johanio'] = 'male'
+        nombres_desconocidos['Johannio'] = 'male'
 
         """Aplicar los cambios del genero en el dataframe"""
         for nombre, genero in nombres_desconocidos.items():
             df.loc[df['NOMBRE'] == nombre, 'GENERO'] = genero
+        print("GENEROS CALCULADOS")
 
         """Asignarle un numero identificador a cada docente"""
-        # df['DOCENTE_ID'] = pd.factorize(df['DOCENTE'])[0]+1
+        df['DOCENTE_ID'] = pd.factorize(df['DOCENTE'])[0]+1
 
         """Crear el dataframe df_docente que tendra la informacion del modelo Docente"""
-        df_docente = df[['CEDULA', 'GENERO']].drop_duplicates().rename(columns={'CEDULA': 'id','GENERO': 'genero'})
+        """"""# df_docente = df[['CEDULA', 'GENERO']].drop_duplicates().rename(columns={'CEDULA': 'id','GENERO': 'genero'})
+        df_docente = df[['DOCENTE_ID', 'GENERO']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id','GENERO': 'genero'})
 
         """Se eliminan las columnas DOCENTEMATERIACODGR y DOCENTE para anonimizar los datos, y tambien se elimina la columna SERIE que no tiene importancia para este estudio"""
         df = df.drop(columns=['SERIE','DOCENTEMATERIACODGR', 'DOCENTE'])
@@ -190,6 +192,7 @@ class ExcelUploadView(APIView):
                 texto = texto.replace(original, reemplazo)
             return texto
         df['COMENTARIO'] = df['COMENTARIO'].apply(quitar_tildes)
+        print("TILDES ELIMINADAS")
 
         """Filtros"""
 
@@ -215,12 +218,16 @@ class ExcelUploadView(APIView):
         Solo se podran analizar los comentarios que tengan 512 caracteres o menos, ya que ese es el limite de caracteres que permiten los clasificadores de sentimiento para calcular la polaridad de los comentarios
         """
         df_cortos = df_blacklist[df_blacklist['COMENTARIO'].str.len() <= 512]
+        print("FILTROS APLICADOS")
 
-        """Se crea un identificador de comentario temporal"""
+        """Se crea un identificador para los comentarios"""
         # Restablecer los índices del DataFrame
         df_cortos = df_cortos.reset_index(drop=True)
         # Encontrar cual es el id de comentario con mayor valor para seguir con el orden
         max_id_comentario = Comentario.objects.aggregate(Max('id'))['id__max']
+        # Asegúrate de que max_id_comentario no sea None
+        max_id_comentario = max_id_comentario if max_id_comentario is not None else 0
+        
         # Insertar la columna ID_COMENTARIO que será el índice de cada comentario
         df_cortos['ID_COMENTARIO'] = df_cortos.index + max_id_comentario + 1
 
@@ -228,6 +235,7 @@ class ExcelUploadView(APIView):
         
         # Tokenizar los comentarios y guardar los resultados en una nueva columna TOKENIZACION
         df_cortos['TOKENIZACION'] = df_cortos['COMENTARIO'].apply(word_tokenize)
+        print("TOKENIZACION APLICADA")
 
         """Stop Words"""
         
@@ -253,6 +261,7 @@ class ExcelUploadView(APIView):
 
         """Crear la columna COMENTARIO_LIMPIO donde iran los comentarios sin stopwords, signos de puntuacion, caracteres especiales y numeros"""
         df_cortos['COMENTARIO_LIMPIO'] = df_cortos['TOKEN_LIMPIO'].apply(lambda x: ' '.join(x))
+        print("STOPWORDS ELIMINADOS")
 
         """Analisis de Sentimientos"""
 
@@ -278,6 +287,8 @@ class ExcelUploadView(APIView):
             experto1.append(result['label'])
             experto2.append(result2['label'])
             experto3.append(result3['label'])
+
+        print("RESULTADOS DE LOS EXPERTOS GUARDADOS")
 
         """
         El experto1 es el unico clasificador que da sus resultados en calificacion de estrellas
@@ -319,6 +330,7 @@ class ExcelUploadView(APIView):
 
         """Calcular la polaridad definitiva de los comentarios"""
         sentimiento = comparar_listas(experto1, experto2, experto3)
+        print("CALCULO DE LA POLARIDAD TERMINADA")
 
         """Crear una nueva columna CALIFICACION que tendra la calificacion numerica de los comentarios"""
         df_cortos['CALIFICACION'] = estrellas
@@ -337,41 +349,46 @@ class ExcelUploadView(APIView):
         df_materia = df_cortos[['CODIGOMATERIA', 'MATERIA', 'ESCUELA']].drop_duplicates().rename(columns={'CODIGOMATERIA': 'codigo', 'MATERIA': 'nombre', 'ESCUELA': 'escuela'})
 
         """Crear el dataframe df_comentario que tendrá la informacion del modelo Comentario"""
-        print(df_cortos)
+        # print(df_cortos)
         df_comentario = df_cortos[['ID_COMENTARIO','COMENTARIO', 'COMENTARIO_LIMPIO', 'CALIFICACION', 'SENTIMIENTO']].rename(columns={'ID_COMENTARIO': 'id_comentario','COMENTARIO': 'comentario', 'COMENTARIO_LIMPIO': 'comentario_limpio', 'CALIFICACION': 'calificacion', 'SENTIMIENTO': 'sentimiento'})
 
         """Crear el dataframe df_evaluacion que tendrá la informacion del modelo Evaluacion"""
-        df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'CEDULA' ]].rename(columns={'CEDULA': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
+        """"""# df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'CEDULA' ]].rename(columns={'CEDULA': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
+        df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'DOCENTE_ID' ]].rename(columns={'DOCENTE_ID': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
 
-        """Crear el dataframe df_daca que tendrá la informacion del modelo Daca"""
+        """Crear el dataframe df_daca que tendrá la informacion del modelo Daca(Esto ya no es necesario)"""
         # data = {'es_superuser':[True],"id": ['daca'], "nombre":['daca'], 'es_director':[False], 'es_docente':[False], 'es_daca':[True], 'es_activo':[True], 'es_staff':[True]}
         # df_daca = pd.DataFrame(data)
 
         """Encontrar cuales son todas las escuelas"""
         # escuelas = df_cortos['ESCUELA'].unique()
 
+        escuelas = ['QUÍMICA', 'DE RECURSOS NATURALES Y DEL AMBIENTE', 'MECÁNICA', 'ELÉCTRICA Y ELECTRÓNICA', 'DE ALIMENTOS', 'CIVIL Y GEOMÁTICA', 'DE SISTEMAS Y COMPUTACIÓN', 'INDUSTRIAL', 'DE MATERIALES', 'ESTADÍSTICA']
+
         """Crear el dataframe df_director que tendrá la informacion del modelo Director"""
-        # data = {
-        #     "id_director": ['dquimica', 'dambiente', 'dmecanica', 'delec', 'dalimentos', 'dcivil', 'dsistemas', 'dindustria', 'dmaterial', 'destadist'],  # Datos para la columna "ID"
-        #     "escuela": escuelas  # Datos para la columna "Escuela"
-        # }
-        # df_director = pd.DataFrame(data)
+        data = {
+            "id_director": ['dquimica', 'dambiente', 'dmecanica', 'delec', 'dalimentos', 'dcivil', 'dsistemas', 'dindustria', 'dmaterial', 'destadist'],  # Datos para la columna "ID"
+            "escuela": escuelas  # Datos para la columna "Escuela"
+        }
+        df_director = pd.DataFrame(data)
 
         """Crear el dataframe df_director_usuario que tendrá la informacion del modelo Usuario"""
-        # df_director_usuario = df_director
-        # df_director_usuario['nombre']=df_director_usuario['id_director']
-        # df_director_usuario = df_director_usuario.rename(columns={'id_director':'id'})
-        # df_director_usuario["es_director"] = True
-        # df_director_usuario["es_docente"] = False
-        # df_director_usuario["es_daca"] = False
-        # df_director_usuario["es_activo"] = True
-        # df_director_usuario["es_staff"] = False
+        df_director_usuario = df_director
+        df_director_usuario['nombre']=df_director_usuario['id_director']
+        df_director_usuario = df_director_usuario.rename(columns={'id_director':'id'})
+        df_director_usuario["es_director"] = True
+        df_director_usuario["es_docente"] = False
+        df_director_usuario["es_daca"] = False
+        df_director_usuario["es_activo"] = True
+        df_director_usuario["es_staff"] = False
 
-        # df_director_usuario = df_director_usuario.drop(columns=["escuela"])
-        # df_director_usuario.insert(0, "es_superuser", False)
+        df_director_usuario = df_director_usuario.drop(columns=["escuela"])
+        df_director_usuario.insert(0, "es_superuser", False)
 
         """Crear el dataframe df_docente_usuario que tendrá la informacion del modelo Usuario"""
-        df_docente_usuario = df_cortos[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
+        # df_docente_usuario = df_cortos[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
+        df_docente_usuario = df[['DOCENTE_ID', 'NOMBRE']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id', 'NOMBRE':'nombre'})
+        """"""# df_docente_usuario = df[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
         df_docente_usuario["es_director"] = False
         df_docente_usuario["es_docente"] = True
         df_docente_usuario["es_daca"] = False
@@ -380,19 +397,21 @@ class ExcelUploadView(APIView):
 
         df_docente_usuario.insert(0, "es_superuser", False)
 
-        """Concatenar los dataframes df_docente_usuario, df_director_usuario y df_daca para insertar la informacion en el modelo Usuario"""
-        # df_concatenado = pd.concat([df_docente_usuario, df_director_usuario, df_daca], ignore_index=True)
+        """Concatenar los dataframes df_docente_usuario y df_director_usuario para insertar la informacion en el modelo Usuario"""
+        df_concatenado = pd.concat([df_docente_usuario, df_director_usuario], ignore_index=True)
 
         """Agregar una columna que tendrá el valor de la contraseña de los usuarios. La contraseña tendrá el mismo valor que el id"""
-        df_docente_usuario.insert(3, "contrasenha", df_docente_usuario["id"])
+        # df_docente_usuario.insert(3, "contrasenha", df_docente_usuario["id"])
+        df_concatenado.insert(3, "contrasenha", df_concatenado["id"])
 
         """Cifrar las contraseñas"""
-        df_docente_usuario['contrasenha'] = df_docente_usuario['contrasenha'].apply(lambda x: make_password(str(x)))
+        # df_docente_usuario['contrasenha'] = df_docente_usuario['contrasenha'].apply(lambda x: make_password(str(x)))
+        df_concatenado['contrasenha'] = df_concatenado['contrasenha'].apply(lambda x: make_password(str(x)))
 
         print("ANTES DE FOR 1")
 
-        for _, row in df_docente_usuario.iterrows():
-            # Manejo del modelo Usuario
+        # for _, row in df_docente_usuario.iterrows():
+        for _, row in df_concatenado.iterrows():
             if not Usuario.objects.filter(id=row['id']).exists():
                 Usuario.objects.create(
                     id=row['id'],
@@ -420,6 +439,14 @@ class ExcelUploadView(APIView):
                 Materia.objects.create(
                     codigo=row['codigo'],
                     nombre=row['nombre'],
+                    escuela=row['escuela']
+                )
+
+        for _, row in df_director.iterrows():
+            usuario_obj = Usuario.objects.get(id=row['id_director'])
+            if not DirectorEscuela.objects.filter(usuario=usuario_obj).exists():
+                DirectorEscuela.objects.create(
+                    usuario=usuario_obj,
                     escuela=row['escuela']
                 )
 
