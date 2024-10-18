@@ -83,7 +83,7 @@ class AnalyzeCommentsView(APIView):
 
         # Genera la respuesta usando Gemini
         response = model.generate_content(mensaje)
-        # print(response.usage_metadata)
+        print(response.usage_metadata)
 
         # Retorna la respuesta de Gemini en la respuesta HTTP
         return Response({
@@ -310,9 +310,9 @@ class ExcelUploadView(APIView):
         experto1 = ['POS' if x == '4 stars' or x == '5 stars' else x for x in experto1]
 
         """Cambiar el nombre de las etiquetas de polaridad"""
-        experto2 = ['NEG' if x == 'Negative' else x for x in experto3]
-        experto2 = ['NEU' if x == 'Neutral' else x for x in experto3]
-        experto2 = ['POS' if x == 'Positive' else x for x in experto3]
+        experto2 = ['NEG' if x == 'Negative' else x for x in experto2]
+        experto2 = ['NEU' if x == 'Neutral' else x for x in experto2]
+        experto2 = ['POS' if x == 'Positive' else x for x in experto2]
 
         """Funcion que compara la polaridad calculada por cada clasificador y llega a un veredicto final"""
         def comparar_listas(lista1, lista2, lista3):
