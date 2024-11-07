@@ -83,7 +83,7 @@ class AnalyzeCommentsView(APIView):
 
         # Genera la respuesta usando Gemini
         response = model.generate_content(mensaje)
-        print(response.usage_metadata)
+        # print(response.usage_metadata)
 
         # Retorna la respuesta de Gemini en la respuesta HTTP
         return Response({
@@ -225,7 +225,7 @@ class ExcelUploadView(APIView):
         df_cortos = df_cortos.reset_index(drop=True)
         # Encontrar cual es el id de comentario con mayor valor para seguir con el orden
         max_id_comentario = Comentario.objects.aggregate(Max('id'))['id__max']
-        # Asegúrate de que max_id_comentario no sea None
+        # Asegurarse de que max_id_comentario no sea None
         max_id_comentario = max_id_comentario if max_id_comentario is not None else 0
         
         # Insertar la columna ID_COMENTARIO que será el índice de cada comentario
