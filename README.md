@@ -13,8 +13,6 @@ para interactuar con el frontend. La base de datos utilizada es PostgreSQL.
 ## Requisitos
 
 - Python 3.x
-- Django 4.x
-- Django Rest Framework 3.x
 - PostgreSQL
 
 ## Configurar la base de datos
