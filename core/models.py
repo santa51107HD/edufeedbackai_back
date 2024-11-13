@@ -14,17 +14,22 @@ class UserManager(BaseUserManager):
     
     def create_superuser(self, id, password):
         user = self.create_user(id, password)
+        user.nombre = id
         user.is_staff = True
         user.is_superuser = True
+        user.is_daca = True
         user.save(using=self._db)
+
+        # Crear instancia de Daca asociada al superusuario
+        Daca.objects.create(usuario=user)
 
         return user
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
-    id = models.CharField(max_length=10, primary_key=True)
+    id = models.CharField(max_length=20, primary_key=True)
     nombre = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
-    is_director_programa = models.BooleanField('director status', default=False)
+    is_director_escuela = models.BooleanField('director status', default=False)
     is_docente = models.BooleanField('docente status', default=False)
     is_daca = models.BooleanField('daca status', default=False)
     is_active = models.BooleanField(default=True)
@@ -34,8 +39,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'id'
 
-class DirectorPrograma(models.Model):
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, primary_key=True, related_name='director_programa')
+class DirectorEscuela(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, primary_key=True, related_name='director_escuela')
     escuela = models.CharField(max_length=50)
 
 class Docente(models.Model):
@@ -58,9 +63,9 @@ class Comentario(models.Model):
     sentimiento = models.CharField(max_length=3)
 
 class Evaluacion(models.Model):
-    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='comentario_id')
-    docente = models.ForeignKey(Docente, on_delete=models.CASCADE, db_column='docente_id')
-    materia = models.ForeignKey(Materia, on_delete=models.CASCADE, db_column='materia_codigo')
+    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='comentario_id', related_name='evaluaciones_comentario')
+    docente = models.ForeignKey(Docente, on_delete=models.CASCADE, db_column='docente_id', related_name='evaluaciones_docente')
+    materia = models.ForeignKey(Materia, on_delete=models.CASCADE, db_column='materia_codigo', related_name='evaluaciones_materia')
     grupo = models.IntegerField()
     semestre = models.CharField(max_length=10)
     anho = models.IntegerField()
