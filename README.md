@@ -22,14 +22,6 @@ para interactuar con el frontend. La base de datos utilizada es PostgreSQL.
 
    ![image](https://github.com/user-attachments/assets/ceaed080-b4f8-48cf-99f0-8d4b7db289c1)
 
-## Crear una API key para la API de Gemini
-   
-1. Dirigirse a https://aistudio.google.com/app/apikey iniciando sesión con una cuenta de Google. Debe seleccionar un proyecto de Google Cloud, puede ser el que ya viene por defecto llamado "Generative Language Client".
-  ![image](https://github.com/user-attachments/assets/b61365e8-a288-4701-94cd-0e9c30c18128)
-
-2. Copiar la API key y dirigirse a la clase "AnalyzeCommentsView" ubicada en el archivo "views.py" de la carpeta "core", y reemplazar el texto "API-KEY" por el valor de la API key. La API key debe ir entre comillas.
-  ![image](https://github.com/user-attachments/assets/b4d579b4-9a70-4662-b19a-bbc111c8014a)
-
 ## Instalación y Configuración
 
 1. Clonar el repositorio:
@@ -55,6 +47,14 @@ para interactuar con el frontend. La base de datos utilizada es PostgreSQL.
 5. Crear un superusuario:
    ```bash
    python manage.py createsuperuser
+
+## Crear una API key para la API de Gemini
+   
+1. Dirigirse a https://aistudio.google.com/app/apikey iniciando sesión con una cuenta de Google. Debe seleccionar un proyecto de Google Cloud, puede ser el que ya viene por defecto llamado "Generative Language Client".
+  ![image](https://github.com/user-attachments/assets/b61365e8-a288-4701-94cd-0e9c30c18128)
+
+2. Copiar la API key y dirigirse a la clase "AnalyzeCommentsView" ubicada en el archivo "views.py" de la carpeta "core", y reemplazar el texto "API-KEY" por el valor de la API key. La API key debe ir entre comillas.
+  ![image](https://github.com/user-attachments/assets/b4d579b4-9a70-4662-b19a-bbc111c8014a)
 
 ## Ejecución
 
