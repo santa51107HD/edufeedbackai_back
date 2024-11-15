@@ -69,16 +69,6 @@ para interactuar con el frontend. La base de datos utilizada es PostgreSQL.
 Dirigirse a https://github.com/santa51107HD/edufeedbackai_front
 
 ## Notas
-1. Se incluye en el repositorio del frontend un archivo en formato Excel para cargar datos de prueba en la aplicación. Este archivo contiene datos ficticios.
+1. Se incluye en el repositorio del frontend un archivo en formato Excel para cargar datos de prueba en la aplicación. Este archivo contiene datos ficticios para realizar pruebas.
 2. El conjunto de datos proporcionado por la DACA no incluye un código único para identificar a los docentes, por lo que, temporalmente, se utilizan sus nombres completos como identificador. Posteriormente, a cada nombre completo único se le asigna un ID.
-3. Debido a la anonimización de los datos, cada vez que se importe un archivo de prueba en Excel, se crearán nuevos usuarios docentes, ya que no existe un identificador único constante.
-4. Si se desea implementar una identificación más consistente para los docentes en la aplicación, se deben realizar los siguientes pasos:
-    - Agregar una columna llamada "CEDULA" en el archivo de prueba Excel y completar dicha columna con los datos correspondientes para cada registro.
-    - Luego, en el archivo "views.py" dentro de la carpeta "core", dirigirse a la clase "ExcelUploadView", comentar las líneas 164, 168, 357 y 390, y descomentar las líneas 167, 356 y 391.
-
-      ![image](https://github.com/user-attachments/assets/b98a40ea-5fc4-4c4d-96ca-1a2494314363)
-      ![image](https://github.com/user-attachments/assets/13409c08-f4fb-423c-bcc7-5dbb5affcca4)
-      ![image](https://github.com/user-attachments/assets/7881ffef-72ec-4a5d-a08c-8c61f70a6855)
-      ![image](https://github.com/user-attachments/assets/55f404ab-a231-4b76-a2d4-0aedf25e107a)
-      
-    - Este ajuste permitirá utilizar la cédula como identificador único de los docentes.
+3. Se ha incluido una versión del código adaptada para utilizar un identificador de "CEDULA", permitiendo mayor consistencia al realizar pruebas con el archivo Excel de ejemplo.

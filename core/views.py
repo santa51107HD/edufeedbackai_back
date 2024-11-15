@@ -112,7 +112,7 @@ class ExcelUploadView(APIView):
         """Obtener el nombre de los docentes para estimar su genero"""
         # Con str.split() divido cada palabra en una lista, con str[0] agarro el primer nombre de cada docente, despues pongo todo en minuscula con str.lower()
         #  y hago que la primera letra del nombre sea mayuscula con str.capitalize(). Todo esto para que la libreria gender-guesser funcione correctamente
-        df['NOMBRE'] = df['DOCENTEMATERIACODGR'].str.split().str[0].str.lower().str.capitalize()
+        df['NOMBRE'] = df['DOCENTE'].str.split().str[0].str.lower().str.capitalize()
         # Ahora 'Nombre' contendrá solo el primer nombre de cada persona
 
         """Usar las librerias gender_guesser y genderize para estimar el genero de los docentes"""
@@ -147,7 +147,7 @@ class ExcelUploadView(APIView):
         # Iterar sobre los nombres desconocidos y actualizar el género en el diccionario
         for nombre, genero in nombres_desconocidos.items():
             resultado = genderize.get([nombre])
-            genero_predicho = resultado[0]['gender']
+            genero_predicho = resultado[0]['gender'] if resultado[0]['gender'] is not None else 'unknown'
             nombres_desconocidos[nombre] = genero_predicho
 
         """Para este caso en especifico quedaron 3 nombres sin genero, se les asigna el genero manualmente"""
@@ -161,11 +161,11 @@ class ExcelUploadView(APIView):
         print("GENEROS CALCULADOS")
 
         """Asignarle un numero identificador a cada docente"""
-        df['DOCENTE_ID'] = pd.factorize(df['DOCENTE'])[0]+1
+        """"""# df['DOCENTE_ID'] = pd.factorize(df['DOCENTE'])[0]+1
 
         """Crear el dataframe df_docente que tendra la informacion del modelo Docente"""
-        """"""# df_docente = df[['CEDULA', 'GENERO']].drop_duplicates().rename(columns={'CEDULA': 'id','GENERO': 'genero'})
-        df_docente = df[['DOCENTE_ID', 'GENERO']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id','GENERO': 'genero'})
+        df_docente = df[['CEDULA', 'GENERO']].drop_duplicates().rename(columns={'CEDULA': 'id','GENERO': 'genero'})
+        """"""# df_docente = df[['DOCENTE_ID', 'GENERO']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id','GENERO': 'genero'})
 
         """Se eliminan las columnas DOCENTEMATERIACODGR y DOCENTE para anonimizar los datos, y tambien se elimina la columna SERIE que no tiene importancia para este estudio"""
         df = df.drop(columns=['SERIE','DOCENTEMATERIACODGR', 'DOCENTE'])
@@ -353,8 +353,8 @@ class ExcelUploadView(APIView):
         df_comentario = df_cortos[['ID_COMENTARIO','COMENTARIO', 'COMENTARIO_LIMPIO', 'CALIFICACION', 'SENTIMIENTO']].rename(columns={'ID_COMENTARIO': 'id_comentario','COMENTARIO': 'comentario', 'COMENTARIO_LIMPIO': 'comentario_limpio', 'CALIFICACION': 'calificacion', 'SENTIMIENTO': 'sentimiento'})
 
         """Crear el dataframe df_evaluacion que tendrá la informacion del modelo Evaluacion"""
-        """"""# df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'CEDULA' ]].rename(columns={'CEDULA': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
-        df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'DOCENTE_ID' ]].rename(columns={'DOCENTE_ID': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
+        df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'CEDULA' ]].rename(columns={'CEDULA': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
+        """"""# df_evaluacion = df_cortos[['GRUPO', 'SEMESTRE', 'AÑO', 'ID_COMENTARIO', 'CODIGOMATERIA', 'DOCENTE_ID' ]].rename(columns={'DOCENTE_ID': 'docente_id','CODIGOMATERIA': 'materia_codigo', 'GRUPO': 'grupo', 'SEMESTRE':'semestre', 'AÑO': 'anho', 'ID_COMENTARIO': 'comentario_id'})
 
         """Crear el dataframe df_daca que tendrá la informacion del modelo Daca(Esto ya no es necesario)"""
         # data = {'es_superuser':[True],"id": ['daca'], "nombre":['daca'], 'es_director':[False], 'es_docente':[False], 'es_daca':[True], 'es_activo':[True], 'es_staff':[True]}
@@ -387,8 +387,8 @@ class ExcelUploadView(APIView):
 
         """Crear el dataframe df_docente_usuario que tendrá la informacion del modelo Usuario"""
         # df_docente_usuario = df_cortos[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
-        df_docente_usuario = df[['DOCENTE_ID', 'NOMBRE']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id', 'NOMBRE':'nombre'})
-        """"""# df_docente_usuario = df[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
+        """"""# df_docente_usuario = df[['DOCENTE_ID', 'NOMBRE']].drop_duplicates().rename(columns={'DOCENTE_ID': 'id', 'NOMBRE':'nombre'})
+        df_docente_usuario = df[['CEDULA', 'NOMBRE']].drop_duplicates().rename(columns={'CEDULA': 'id', 'NOMBRE':'nombre'})
         df_docente_usuario["es_director"] = False
         df_docente_usuario["es_docente"] = True
         df_docente_usuario["es_daca"] = False
